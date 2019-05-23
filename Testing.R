@@ -1,3 +1,5 @@
+library(ggplot2)
+
 setwd("~/Documents/Ecuador/")
 
 # Import only the column names
