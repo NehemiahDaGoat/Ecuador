@@ -1,0 +1,432 @@
+---
+title: "Carbon Flux"
+author: "Andrew Murray"
+date: "3/19/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(plotly)
+library(caTools)
+```
+
+#This document shows flux collection analysis for data collected using vaisalla and eoSense sensors/
+
+##Data Collected Novemebr 21, 2018:
+## Unadjusted data
+Raw data was converted from voltage to ppm for CO2 concentrations. Below is a plot of CO2 concentrations in ppm. The time between 13:30 - 14:00 was used to determine background concentration of CO2 within the stream. The four sensors were placed in increments of 5 meters with sensor 1 being the farthest upstream and sensor 4 the farthest downstream. I began releasing dissolved CO2 into the stream approximately 5 meters upstream of sensor 1 at 14:04. At first, pressure was high and CO2 was bubbling vigorously at the surface. Depth of the stream at the point of CO2 injection was roughly 1 foot, and the injection apparatus was laying on the stream bed. At 14:05 I reduced the rate of CO2 injection to a slow bubble. At 14:30 I increased the rate of CO2 injection to a steady bubble. At 15:00, CO2 injection was discontinued.
+
+
+## Format and convert raw data to correct units
+Here, we import the raw data that was recorded on the CRX1000 data logger and convert it from millivolts. Data from the Vaisalla CO2 sensors are coinverted into units of ppm. data from the eosFD chamber sensor are converted to units of umols/m2/s-1 (micromols per square meter per second). There is a 1.5% margin of error for the Vaisalla sensors which equates to 150 ppm out of the full sensor range of 10,000 ppm. Therefore we also run a baseline adjustment so that we can more accurately measure the CO2 injection levels between sensors.
+To determine the relative readings for each of the four CO2 sensors, I used baseline subtraction. Baseline values were calculated as the average CO2 reading taken between during a time period when CO2 was not being injected.
+```{r readData, echo=FALSE, message=FALSE}
+
+table <- as.data.frame(read.table("D:/OneDrive/OneDrive - University of North Carolina at Chapel Hill/Documents/Fall 2018/Carbon Flux/Collections/FluxData11212018.dat",header = FALSE, skip = 4, sep = ","))
+
+colnames(table) <- c("TIMESTAMP","RECORD","BattV_Avg","PTemp_C_Avg","CO2_1_Avg","CO2_2_Avg","CO2_3_Avg","CO2_4_Avg","CO2_Eos_Avg","Flux_Avg","CO2_1_Max","CO2_1_TMx","CO2_2_Max","CO2_2_TMx","CO2_3_Max","CO2_3_TMx","CO2_4_Max","CO2_4_TMx","CO2_Eos_Max","CO2_Eos_TMx","Flux_Max","Flux_TMx","CO2_1_Min","CO2_1_TMn","CO2_2_Min","CO2_2_TMn","CO2_3_Min","CO2_3_TMn","CO2_4_Min","CO2_4_TMn","CO2_Eos_Min","CO2_Eos_TMn","Flux_Min","Flux_TMn")
+
+#Convert time to Posixct
+table$time <- as.POSIXct(table$TIMESTAMP)
+
+#Convert Analog outputs to PPM
+table$CO2_1_PPM <- (table$CO2_1_Avg / 5000) * 10000
+table$CO2_2_PPM <- (table$CO2_2_Avg / 5000) * 10000
+table$CO2_3_PPM <- (table$CO2_3_Avg / 5000) * 10000
+table$CO2_4_PPM <- (table$CO2_4_Avg / 5000) * 10000
+table$CO2_Eos_PPM <- (table$CO2_Eos_Avg / 5000) * 5000
+
+#Convert Flux to range of -10 to 10 umol m2s1
+table$Flux_Eos_umol <- ((table$Flux_Avg / 5000) * 20) -10
+
+#Build a plot to visualize variation in CO2 measurements
+
+#Create simplified table with CO2 Measurements by Sensor
+CO2_1 <- data.frame(table$CO2_1_PPM)
+CO2_1$ID <- rownames(CO2_1)
+CO2_1$Sensor <- "Sensor 1"
+CO2_1$Time <- as.POSIXct(table$TIMESTAMP)
+colnames(CO2_1) <- c("PPM","ID","Sensor","Time")
+
+#Adjust with baseline subtraction
+CO2_1_Base <- CO2_1[1145:1385,]
+CO2_1_Base <- mean(CO2_1_Base$PPM)
+CO2_1$PPM_Adj <- CO2_1$PPM-CO2_1_Base+858
+CO2_1$Dist <- 25
+
+
+CO2_2 <- data.frame(table$CO2_2_PPM)
+CO2_2$ID <- rownames(CO2_2)
+CO2_2$Sensor <- "Sensor 2"
+CO2_2$Time <- as.POSIXct(table$TIMESTAMP)
+colnames(CO2_2) <- c("PPM","ID","Sensor","Time")
+CO2_2_Base <- CO2_2[1145:1385,]
+CO2_2_Base <- mean(CO2_2_Base$PPM)
+CO2_2$PPM_Adj <- CO2_2$PPM-CO2_2_Base+858
+CO2_2$Dist <- 47
+
+CO2_3 <- data.frame(table$CO2_3_PPM)
+CO2_3$ID <- rownames(CO2_3)
+CO2_3$Sensor <- "Sensor 3"
+CO2_3$Time <- as.POSIXct(table$TIMESTAMP)
+colnames(CO2_3) <- c("PPM","ID","Sensor","Time")
+CO2_3_Base <- CO2_3[1145:1385,]
+CO2_3_Base <- mean(CO2_3_Base$PPM)
+CO2_3$PPM_Adj <- CO2_3$PPM-CO2_3_Base+858
+CO2_3$Dist <- 76
+
+CO2_4 <- data.frame(table$CO2_4_PPM)
+CO2_4$ID <- rownames(CO2_4)
+CO2_4$Sensor <- "Sensor 4"
+CO2_4$Time <- as.POSIXct(table$TIMESTAMP)
+colnames(CO2_4) <- c("PPM","ID","Sensor","Time")
+CO2_4_Base <- CO2_4[1145:1385,]
+CO2_4_Base <- mean(CO2_4_Base$PPM)
+CO2_4$PPM_Adj <- CO2_4$PPM-CO2_4_Base+858
+CO2_4$Dist <- 100
+
+
+```
+
+# Smooth the data using a moving average and calculate standard deviation
+We smooth the data using a moving average to better estimate the change in pCO2 at each sensor. This avoids the matching of peaks and valleys which could introduce error.
+
+```{r movingAverage}
+
+# Apply a moving average to the baseline adjusted ppm data
+# The ma function uses 'n' values for the moving average.
+# We also remove NA values here which are created by the first and last 'n'
+# records not having enough records on either side to calculate a moving average.
+
+ma <- function(x, n=10){stats::filter(x, rep(1/n,n), sides = 2)}
+CO2_1 <- CO2_1%>%
+  filter(PPM_Adj > 0)%>%
+  mutate(PPM_Adj_MA = ma(PPM_Adj))%>%
+  mutate(PPM_Adj_SD = runsd(PPM_Adj,11))%>%
+  na.omit()
+CO2_2 <- CO2_2%>%
+  filter(PPM_Adj > 0)%>%
+  mutate(PPM_Adj_MA = ma(PPM_Adj))%>%
+  mutate(PPM_Adj_SD = runsd(PPM_Adj,11))%>%
+  na.omit()
+CO2_3 <- CO2_3%>%
+  filter(PPM_Adj > 0)%>%
+  mutate(PPM_Adj_MA = ma(PPM_Adj))%>%
+  mutate(PPM_Adj_SD = runsd(PPM_Adj,11))%>%
+  na.omit()
+CO2_4 <- CO2_4%>%
+  filter(PPM_Adj > 0)%>%
+  mutate(PPM_Adj_MA = ma(PPM_Adj))%>%
+  mutate(PPM_Adj_SD = runsd(PPM_Adj,11))%>%
+  na.omit()
+
+CO2_All <- rbind(CO2_1,CO2_2,CO2_3,CO2_4)
+```
+
+
+
+
+```{r}
+
+
+
+#Simple CO2 plot with lines
+
+lines <- ggplot(CO2_All, aes(x=Time, y=PPM, group=Sensor, colour = Sensor))+geom_line()+
+  ggtitle("In-Stream CO2 (Unadjusted)")+
+  theme(axis.text.y = element_text(size = 14),
+        axis.title.y = element_text(size=18),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size=18),
+        plot.title = element_text(size=20))
+ggplotly(lines)
+```
+
+
+
+```{r adjust}
+lines_adj <- ggplot(CO2_All, aes(x=Time, y=PPM_Adj_MA, group=Sensor, colour = Sensor))+geom_line(size=1)+
+  ggtitle("Adjusted & Smoothed CO2")+
+  ylab("PPM")+
+  theme(axis.text.y = element_text(size = 14),
+        axis.title.y = element_text(size=18),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size=18),
+        plot.title = element_text(size=20))
+
+ggplotly(lines_adj)
+```
+
+##CO2 Flux Plot
+The eosense eosFD sensor measures direct CO2 Flux. The eosFD was located halfway between sensors 2 and 3. Below is a plot of flux
+
+```{r flux}
+flux <- data.frame(as.POSIXct(table$TIMESTAMP))
+flux$flux <- table$Flux_Eos_umol
+colnames(flux) <- c('time','flux')
+
+flux_lines <- ggplot(flux, aes(x=time, y=flux, group=1))+geom_line(colour = '#4B9CD3',size=1)+
+  ggtitle("Flux")+
+  ylab(expression(mu ~ moles ~ m^{-2} ~ s^{-1}))+
+  theme(axis.text.y = element_text(size = 14),
+        axis.title.y = element_text(size=18),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size=18),
+        plot.title = element_text(size=20))+
+  ylim(0,5)
+
+flux_lines
+```
+
+
+#Adjust the measurements for time
+The effects of the CO2 injections are offset by the time it takes the CO2 to travel downstream. In order to actually measure the effect of a given input of CO2 in a single point in time, we must adjust the date so that the they are directly comparable along the x-axis (i.e. remove the time delay). We did measure stream flow in this data collection but we can infer it by identifying the CO2 peaks between sensors. The matrix below shows four clear peaks that appeared in all four sensors and the time offsets between them.
+```{r peaks, echo=FALSE}
+df <- data.frame(Sensor = c("S1","S2","S3","S4"), Peak1 = c(0,11,10,12), Peak2 = c(0,10,8,15), Peak3 = c(0,11,12,11),Peak4 = c(0,10,9,12))
+df
+```
+
+The distances between sensors are 22 meters (Sensor 1 --> Sensor 2), 29 meters (Sensor 2 --> Sensor 3) and 24 meters (Sensor 3 --> Sensor 4) which yield the following estimated speeds in meters per second:
+```{r speeds, echo=FALSE}
+speeds <- df[2:4,]
+speeds$Dist <- c(22,29,24)
+speeds$Sensor <- c("S1 -> S2", "S2 -> S3", "S3 -> S4")
+speeds$Peak1 <- speeds$Dist/(speeds$Peak1 * 60)
+speeds$Peak2 <- speeds$Dist/(speeds$Peak2 * 60)
+speeds$Peak3 <- speeds$Dist/(speeds$Peak3 * 60)
+speeds$Peak4 <- speeds$Dist/(speeds$Peak4 * 60)
+speeds
+```
+
+
+##Estimating discharge for our sensors
+Using a loess function, we can fit a line to the discharge data that was estimated every five minutes and estimate discharge to coincide with our data collected each minute
+```{r discharge}
+dfDischarge <- read.csv("D:/OneDrive/OneDrive - University of North Carolina at Chapel Hill/Documents/Fall 2018/Carbon Flux/RR_SerialDirect_Hydro_2018_12_06_15_10_38_toAM.csv", skip = 1)
+
+#Select subset to coincide with data collection
+dfDischarge <- dfDischarge[8064:8340,]
+
+#Check mean / std deviation / range
+paste0("Mean discharge was: ",round(mean(dfDischarge$Q_rc),3)," cubic meters per second")
+paste0("Std Dev of Discharge was: ",round(sd(dfDischarge$Q_rc),3)," cubic meters per second")
+paste0("The range of discharge was: ",round(max(dfDischarge$Q_rc)-min(dfDischarge$Q_rc),3)," cubic meters per second")
+
+```
+
+Discharge was basically constant5 for the data collection period, so we will simply use mean discharge as our discharge value.
+
+```{r, echo=FALSE}
+discharge <- mean(dfDischarge$Q_rc)
+```
+
+
+## Surface Area  
+Creating the stream surface
+In order to calculate CO2 flux, we need to know the surface area as well as discharge. First, we need to reconstruct the stream. Stream widths were recorded every 1 - 4 meters along the study site and were then used to reconstruct the stream surface. The plot below shows a birds-eye view reconstruction of stream widths and the locations of each of the sensors. Distance = 0 is the point of CO2 injection.
+```{r,fig.height=4 ,fig.width=12, echo=FALSE}
+
+widths <- c(3.25,3.4,3.3,3,1.55,1.38,.85,1.4,1.3,2,2.7,2.2,1.9,2.8,2.7,2.7,2.7,1,1.1,1.7,2,2.5,2.2,2.2,2.6,2.7,3.25,2.8,2.5,2.2,2.2,2.5,1.6,1.2)
+dists <- c(0,3,6,10,12,15,18,19,21,24,25,29,33,35,42,47,51,52,54,57,59,64,66,69,73,76,81,84,88,92,95,98,99,100)
+
+tbl <- data.frame(dists)
+tbl$widths <- widths
+tbl$widthcm <- tbl$widths*100
+
+# Add in Vaisalla CO2 Sensor Locations
+X <- c(25,47,76,100)
+sensors <- data.frame(X)
+sensors$Y <- c(270/2,270/2,270/2,60)
+sensors$Sensor <- "Vaisalla"
+
+# Add in eosFD Flux Sensor location
+X <- 64
+Y <- 250/2
+eosFD <- data.frame(X,Y)
+eosFD$Sensor <- "eosFD"
+sensors <- rbind(sensors, eosFD)
+
+loessbank <- loess(widthcm~dists, data = tbl, span = .3)
+tbl$Smooth <- predict(loessbank)
+
+plot <- ggplot(tbl, aes(x=dists, y = Smooth))+
+  geom_line(aes(y=Smooth))+
+  geom_ribbon(data=tbl, aes(ymin = 0, ymax = Smooth) ,fill="blue", alpha=".8")+
+  geom_point(data = sensors, aes(x = X, y = Y, shape = Sensor, colour = Sensor), size = 5)+
+  xlab("Downstream Distance (m)")+ ylab("Stream Width (cm)")+
+  theme(panel.background = element_rect(fill = "#499122",
+                                size = 0.5, linetype = "solid"))+
+  scale_color_manual(values=c("#ff45e0", "#E69F00"))
+plot
+```
+
+Now we must obtain the surface area of the stream between each set of sensors in order to eventually calculate the flux / m^{2}. To do this, we will calculate the area under the curve in the figure above after we break it down between sensors.
+
+Sensor 1 -> Sensor 2:
+```{r surafaceAreaCalc, echo=FALSE}
+sub1_2 <- tbl[11:16,]
+sub2_3 <- tbl[16:26,]
+sub3_4 <- tbl[26:34,]
+CO2_2$Area <- (max(sub1_2$dists)-min(sub1_2$dists)) * mean(sub1_2$widths)
+CO2_3$Area <- (max(sub2_3$dists)-min(sub2_3$dists)) * mean(sub2_3$widths)
+CO2_4$Area <- (max(sub3_4$dists)-min(sub3_4$dists)) * mean(sub3_4$widths)
+
+```
+### Surface Area Between Vaisalla Sensor Pairs:
+```{r}
+paste0("Sensor 1 -> Sensor 2: ", round(CO2_2$Area[1],3), " square meters")
+paste0("Sensor 2 -> Sensor 3: ", round(CO2_3$Area[1],3), " square meters")
+paste0("Sensor 3 -> Sensor 4: ", round(CO2_4$Area[1],3), " square meters")
+```
+
+
+## Time Offset Correction
+
+Average time between sensors:
+
+* 1 -> 2 ~11 minutes
+* 2 -> 3 ~11 minutes
+* 3 -> 4 ~10 minutes
+
+
+### Calculate time adjustment
+We adjust time to account for flow rate of the stream. The plot below shows what the direct relationship of CO2 concentration is at each sensor in a time-corrected state.
+```{r}
+CO2_All$TimeAdj <- CO2_All$Time
+for(n in 1:NROW(CO2_All)){
+  row <- CO2_All[n,]
+  if(row$Sensor == "Sensor 2"){
+    CO2_All$TimeAdj[n] <- row$Time - 660
+  }
+  else if(row$Sensor == "Sensor 3"){
+    CO2_All$TimeAdj[n] <- row$Time - 1320
+  }
+  else if(row$Sensor == "Sensor 4"){
+    CO2_All$TimeAdj[n] <- row$Time - 1920
+  }
+}
+
+timeAdjPlot <- ggplot(CO2_All)+
+  geom_line(aes(x = TimeAdj, y=PPM_Adj_MA, group = Sensor, colour = Sensor))
+ggplotly(timeAdjPlot)
+```
+
+# k calculation:
+k values can be thought of as the flux rate over distance or more simply the instantaneous rate of decay [Olson, 1963](https://esajournals.onlinelibrary.wiley.com/doi/10.2307/1932179). In our case this means the instantaneous eflux of carbon dioxide in parts per million per meter (as streamflow moves from upstream to downstream). Substituting distance for time in an exponential decay model such as the one used in [Zhang et. al](D:/OneDrive/OneDrive - University of North Carolina at Chapel Hill/Documents/Fall 2018/Carbon Flux/Collections/) yields the following formula:
+ 
+$y=e^{-kd}$
+ 
+or
+ 
+$ln(y)=-k*d$
+ 
+where y is the percent CO2 remaining at distance d relative to the baseline CO2 concentration. Using Sensor 2 as baseline in this instance allows us to calculate k values between sensors 2 -> 3, 2 -> 4, and 3 -> 4.
+
+```{r}
+S2_CO2 <- CO2_All%>%
+  filter(Sensor == "Sensor 2")
+S2_CO2 <- S2_CO2$PPM_Adj_MA[200:500]
+
+S3_CO2 <- CO2_All%>%
+  filter(Sensor == "Sensor 3")
+S3_CO2 <- S3_CO2$PPM_Adj_MA[211:511]
+
+S4_CO2 <- CO2_All%>%
+  filter(Sensor == "Sensor 4")
+S4_CO2 <- S4_CO2$PPM_Adj_MA[221:521]
+
+df <- data.frame("S2" = S2_CO2, "S3" = S3_CO2, "S4" = S4_CO2)
+
+
+df$k_S2_S3 <- (log((df$S3/df$S2)*100)/29)
+df$k_S3_S4 <- (log((df$S4/df$S3)*100)/24)
+df$k_S2_S4 <- (log((df$S4/df$S2)*100)/53)
+
+try <- df%>%
+  select(k_S2_S3,k_S3_S4,k_S2_S4)%>%
+  gather()
+
+ggplot(try)+
+  geom_boxplot(aes(y = value, x = key, group = key))+
+  scale_x_discrete(labels = c("Sensor 2 -> 3","Sensor 2 -> 4", "Sensor 3 -> 4"))+
+  labs(title = "k values for CO2 decrease per meter", x = "Sensor Pair", y = "k value")
+
+```
+
+
+# Direct Flux Comparison
+
+The eosFD flux sensor was placed 17m downstream of sensor 2 and 12m upstream of sensor 3 (d = 64m). Here, we calculate the average flux between sensor 2 and 3 and compare it with the eosFD sensor. We use the time-adjusted data for this, plus known discharge data to estimate CO2 loss in umols (same unit as eosFD).
+
+Proposed Flux Formula:
+
+![](D:/OneDrive/OneDrive - University of North Carolina at Chapel Hill/Documents/Fall 2018/Carbon Flux/images/flux_formula.png)
+Where f is flux in umols per square meter per second, CO2 is the concentration in ppm of CO2 at either Sensor 1 or Sensor 2, .0018 is the conversion for CO2 from ppm to grams per cubic meter, 44.01 is the atomic weight of a molecule of CO2 and A is the surface area in square meters between sensor 1 and 2.
+
+Units:
+
+1 ppm CO2 = 1.94 g/m3
+
+CO2 = 44.01 g/mol
+
+
+##Try flux calculation from discharge
+Multiply discharge by the product of CO2 ppm and .0018 (1 ppm CO2 = .0018 g / m3) to get g/co2 per second. Calculate decline of gCO2 / sec between sensors and then divide by surface area
+```{r fluxPlot, message=FALSE}
+dfFlux <- CO2_All%>%
+  select(TimeAdj,Sensor,PPM_Adj_MA)%>%
+  spread(Sensor,PPM_Adj_MA)%>%
+  na.omit()
+colnames(dfFlux) <- c("TimeAdj","S1AdjMA","S2AdjMA","S3AdjMA","S4AdjMA")
+dfFlux <- dfFlux[217:nrow(dfFlux),]
+dfFlux$S2gPerSecMA <- discharge*(dfFlux$S2AdjMA*.0018)
+dfFlux$S3gPerSecMA <- discharge*(dfFlux$S3AdjMA*.0018)
+dfFlux$uMolsMA <- ((dfFlux$S2gPerSec-dfFlux$S3gPerSec)*(10^6 / 44.01))/CO2_3$Area[1]
+
+#Add the standard dev and Adjusted values (not running average)
+dfSD <- CO2_All%>%
+  select(TimeAdj,Sensor,PPM_Adj_SD)%>%
+  spread(Sensor,PPM_Adj_SD)%>%
+  na.omit
+colnames(dfSD) <- c("TimeAdj","S1SD","S2SD","S3SD","S4SD")
+
+dfAdj <- CO2_All%>%
+  select(TimeAdj,Sensor,PPM_Adj)%>%
+  spread(Sensor,PPM_Adj)%>%
+  na.omit
+colnames(dfAdj) <- c("TimeAdj","S1Adj","S2Adj","S3Adj","S4Adj")
+
+dfOut <- merge(dfFlux,dfSD, by = "TimeAdj")
+dfOut <- merge(dfOut, dfAdj, by = "TimeAdj")
+
+dfOut$S2gPerSecAdj <- discharge*(dfOut$S2Adj*.0018)
+dfOut$S3gPerSecAdj <- discharge*(dfOut$S3Adj*.0018)
+dfOut$uMolsAdj <- ((dfOut$S2gPerSecAdj-dfOut$S3gPerSecAdj)*(10^6 / 44.01))/CO2_3$Area[1]
+
+dfOut <- dfOut%>%
+  mutate(runSdMa = runsd(dfOut$uMolsAdj, 11))
+
+write.csv(dfOut, "D:/OneDrive/OneDrive - University of North Carolina at Chapel Hill/Documents/Fall 2018/Carbon Flux/Outputs/Calculations_11202018.csv")
+
+disPlot <- ggplot(dfOut, aes(TimeAdj))+
+  geom_ribbon(aes(ymin = uMolsMA - runSdMa, ymax= uMolsMA + runSdMa),fill = "grey70")+
+  geom_point(aes(x = TimeAdj, y = uMolsAdj), color = "#a4ce61")+
+  geom_line(aes(x = TimeAdj, y = uMolsMA), color = 'red')+
+  geom_line(data = flux, aes(x=time, y=flux, group=1),colour = '#4B9CD3',size=1)+
+  ylim(-5,25)+
+  theme_bw()
+
+disPlot
+```
+
+
+
+#New plot with last plot but add running average of 10 points and 
+#display average as a line and standard deviation as a ribbon.
