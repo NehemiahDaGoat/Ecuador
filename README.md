@@ -6,3 +6,6 @@ This is a repository where we will put the code we create for our work in and re
 ### Study Design
 
 ![alt text](https://github.com/ARMurray/Ecuador/blob/master/images/VasialaXeosFD.png "Flux Experimental Design")
+
+
+► /play letitgo
