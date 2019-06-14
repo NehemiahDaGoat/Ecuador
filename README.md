@@ -17,6 +17,7 @@ Sensors in use:
 ![alt text](https://github.com/ARMurray/Ecuador/blob/master/images/VasialaXeosFD.png "Flux Experimental Design")
 
 Sensors in use:
+
 **Vaisala** CO2 Probes
 
 **eosFD** CO2 flux chambers
