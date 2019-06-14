@@ -20,8 +20,8 @@ Sensors in use:
 + Vaisala CO2 Probes
 + eosFD CO2 flux chambers
 + C6
-..* Put
-..* The
-..* Specific
-..* Sensors
-..* Here
+⋅⋅* Put
+⋅⋅* The
+⋅⋅* Specific
+⋅⋅* Sensors
+⋅⋅* Here
