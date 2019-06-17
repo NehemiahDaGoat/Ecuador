@@ -8,3 +8,6 @@ CO2<-Picarro1$X12CO2
 
 #Separating Time and CO2 into
 Time[1277:1376]
+
+# Add in a field that tells you the row number
+Picarro1r$rowNum <- rownames(Picarro1)
